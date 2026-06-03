@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxos do Projeto — Malha Aérea</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1e3a5f, #0f1117);
+    padding: 32px 40px;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  header h1 { font-size: 1.8rem; color: #60a5fa; letter-spacing: -0.5px; }
+  header p  { color: #64748b; margin-top: 6px; font-size: 0.95rem; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 20px 40px 0;
+    border-bottom: 1px solid #1e293b;
+    overflow-x: auto;
+    background: #0f1117;
+  }
+
+  .tab {
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: #64748b;
+    transition: all 0.2s;
+    white-space: nowrap;
+    background: transparent;
+  }
+
+  .tab:hover { color: #94a3b8; background: #1e293b; }
+
+  .tab.active {
+    background: #1e293b;
+    color: #60a5fa;
+    border-color: #334155;
+    border-bottom-color: #1e293b;
+  }
+
+  .content {
+    padding: 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .flow-section { display: none; }
+  .flow-section.active { display: block; }
+
+  .section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 6px;
+  }
+
+  .section-sub {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  /* ── Steps ── */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+
+  .step {
+    display: flex;
+    gap: 20px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .step.visible { opacity: 1; transform: translateY(0); }
+
+  .step-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 40px;
+  }
+
+  .step-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  .step-connector {
+    width: 2px;
+    flex: 1;
+    min-height: 24px;
+    background: #1e293b;
+    margin: 4px 0;
+  }
+
+  .step:last-child .step-connector { display: none; }
+
+  .step-body {
+    padding-bottom: 28px;
+    flex: 1;
+  }
+
+  .step-file {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .step-fn {
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+
+  .step-code {
+    margin-top: 10px;
+    background: #0d1117;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.8rem;
+    color: #7dd3fc;
+    line-height: 1.7;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .step-arrow {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: #475569;
+    font-style: italic;
+  }
+
+  /* Cores por arquivo */
+  .color-main   { background: #7c3aed22; border: 2px solid #7c3aed; color: #a78bfa; }
+  .color-aero   { background: #0369a122; border: 2px solid #0369a1; color: #38bdf8; }
+  .color-mat    { background: #05653022; border: 2px solid #056530; color: #4ade80; }
+  .color-end    { background: #92400e22; border: 2px solid #92400e; color: #fbbf24; }
+
+  .file-main  { color: #a78bfa; }
+  .file-aero  { color: #38bdf8; }
+  .file-mat   { color: #4ade80; }
+  .file-end   { color: #fbbf24; }
+
+  .fn-main { color: #c4b5fd; }
+  .fn-aero { color: #7dd3fc; }
+  .fn-mat  { color: #86efac; }
+  .fn-end  { color: #fcd34d; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    padding: 14px 18px;
+    background: #0d1117;
+    border-radius: 10px;
+    border: 1px solid #1e293b;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Nav buttons */
+  .nav {
+    display: flex;
+    gap: 12px;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #1e293b;
+  }
+
+  .nav-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .nav-btn:hover { background: #334155; color: #e2e8f0; }
+  .nav-btn.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+  .nav-btn.primary:hover { background: #2563eb; }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fluxos do Projeto — Malha Aérea</h1>
+  <p>Clique em cada operação e veja passo a passo quais funções são chamadas e o que cada uma faz.</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active"  onclick="showTab(0)">🚀 Inicialização</div>
+  <div class="tab"         onclick="showTab(1)">1 · Cadastrar Aeroporto</div>
+  <div class="tab"         onclick="showTab(2)">2 · Cadastrar Voo</div>
+  <div class="tab"         onclick="showTab(3)">3 · Remover Voo</div>
+  <div class="tab"         onclick="showTab(4)">4 · Listar Voos</div>
+  <div class="tab"         onclick="showTab(5)">5 · Listar Trajetos (DFS)</div>
+  <div class="tab"         onclick="showTab(6)">🗑️ Destruição</div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 0 — INICIALIZAÇÃO                        -->
+<!-- ════════════════════════════════════════════ -->
+<div class="content">
+<div class="flow-section active" id="tab0">
+  <div class="section-title">Inicialização do Sistema</div>
+  <div class="section-sub">O que acontece quando o programa é executado, antes do menu aparecer.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#056530"></div> matriz_esparsa.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line">
+        <div class="step-dot color-main">1</div>
+        <div class="step-connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">main()</div>
+        <div class="step-desc">Ponto de entrada do programa. A primeira coisa que faz é chamar <code>criarGrafo()</code> para montar toda a estrutura de dados na memória.</div>
+        <div class="step-arrow">→ chama criarGrafo() em aeroporto.c</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line">
+        <div class="step-dot color-aero">2</div>
+        <div class="step-connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">criarGrafo()</div>
+        <div class="step-desc">Aloca a struct Grafo na memória. Depois aloca o vetor de aeroportos com 10 slots iniciais. Por último chama <code>criarMatriz(sizeof(Voo))</code> para criar a matriz esparsa que vai guardar os voos.</div>
+        <div class="step-code">Grafo *g = malloc(sizeof(Grafo))
+g->aeroportos = malloc(10 * sizeof(Aeroporto))
+g->capacidade = 10
+g->quantidade = 0
+g->matriz = criarMatriz(sizeof(Voo))  ← próximo passo</div>
+        <div class="step-arrow">→ chama criarMatriz() em matriz_esparsa.c</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line">
+        <div class="step-dot color-mat">3</div>
+        <div class="step-connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">criarMatriz(tamDado)</div>
+        <div class="step-desc">Aloca a struct MatrizEsparsa e inicializa tudo como NULL/zero. Guarda o <code>tamDado</code> (sizeof(Voo) = 4 bytes) para usar depois quando precisar copiar dados com memcpy. É esse parâmetro que torna a matriz genérica.</div>
+        <div class="step-code">m->linhas     = NULL   ← nenhuma linha ainda
+m->colunas    = NULL   ← nenhuma coluna ainda
+m->tamDado    = sizeof(Voo)   ← 4 bytes</div>
+        <div class="step-arrow">→ retorna para criarGrafo() → retorna para main()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line">
+        <div class="step-dot color-end">4</div>
+        <div class="step-connector"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">imprimirMenu() + loop do-while</div>
+        <div class="step-desc">Com o grafo criado, main() entra no loop do menu. Exibe as opções, lê a escolha com fgets+sscanf e chama a função op_* correspondente. Repete até o usuário digitar 0.</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" disabled>← Anterior</button>
+    <button class="nav-btn primary" onclick="showTab(1)">Próximo: Cadastrar Aeroporto →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 1 — CADASTRAR AEROPORTO                  -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-section" id="tab1">
+  <div class="section-title">Operação 1 — Cadastrar Aeroporto</div>
+  <div class="section-sub">Usuário digita o código IATA e o nome da cidade. O aeroporto vai para o vetor dinâmico do grafo.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-main">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">op_cadastrarAeroporto(g)</div>
+        <div class="step-desc">Lê o código IATA com lerString(), converte para maiúsculas com maiusculas(), lê o nome da cidade. Valida que nenhum campo está vazio. Depois repassa para aeroporto.c.</div>
+        <div class="step-code">lerString("Codigo IATA: ", codigo)  →  "gru"
+maiusculas(codigo)               →  "GRU"
+lerString("Cidade: ", cidade)    →  "Sao Paulo"</div>
+        <div class="step-arrow">→ chama cadastrarAeroporto(g, "GRU", "Sao Paulo")</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">indiceAeroporto(g, "GRU")</div>
+        <div class="step-desc">Busca linear no vetor para ver se "GRU" já existe. Se retornar >= 0, o aeroporto já está cadastrado — falha com mensagem. Se retornar -1, pode continuar.</div>
+        <div class="step-code">for i in 0..quantidade:
+    if aeroportos[i].codigo == "GRU" → return i  (já existe!)
+return -1  (pode cadastrar)</div>
+        <div class="step-arrow">→ retorna -1 (não existe), continua em cadastrarAeroporto()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">expandirVetor(g)  <span style="color:#475569;font-weight:400;font-size:0.8rem">— só se o vetor estiver cheio</span></div>
+        <div class="step-desc">Se quantidade == capacidade (vetor lotado), dobra o tamanho com realloc. Se realloc falhar, retorna 0 e o vetor original fica intacto. Caso o vetor não esteja cheio, este passo é pulado.</div>
+        <div class="step-code">novaCapacidade = capacidade * 2   →  10 → 20 → 40...
+realloc(aeroportos, novaCapacidade * sizeof(Aeroporto))</div>
+        <div class="step-arrow">→ vetor expandido (ou não era necessário)</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">cadastrarAeroporto() — copia os dados</div>
+        <div class="step-desc">Pega o ponteiro para o próximo slot vazio do vetor e copia código e cidade com strncpy (seguro: nunca passa do tamanho máximo). Incrementa quantidade.</div>
+        <div class="step-code">a = &aeroportos[quantidade]     ← próximo slot vazio
+strncpy(a->codigo, "GRU", 7)   ← copia com limite
+strncpy(a->cidade, "Sao Paulo", 63)
+quantidade++                    ← agora tem +1 aeroporto
+[OK] Aeroporto GRU cadastrado.</div>
+        <div class="step-arrow">→ retorna para main() → menu aparece de novo</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab(0)">← Anterior</button>
+    <button class="nav-btn primary" onclick="showTab(2)">Próximo: Cadastrar Voo →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 2 — CADASTRAR VOO                        -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-section" id="tab2">
+  <div class="section-title">Operação 2 — Cadastrar Voo</div>
+  <div class="section-sub">Usuário informa origem, destino e número do voo. O voo vira uma aresta na matriz esparsa.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#056530"></div> matriz_esparsa.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-main">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">op_cadastrarVoo(g)</div>
+        <div class="step-desc">Lê origem, destino e número do voo. Converte os códigos para maiúsculas e repassa.</div>
+        <div class="step-code">orig = "GRU", dest = "CNF", num = 101</div>
+        <div class="step-arrow">→ chama cadastrarVoo(g, 101, "GRU", "CNF")</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">indiceAeroporto(g, "GRU") + indiceAeroporto(g, "CNF")</div>
+        <div class="step-desc">Converte os códigos em índices numéricos. O índice é o que a matriz usa como linha/coluna. Se qualquer um retornar -1, o aeroporto não existe e falha.</div>
+        <div class="step-code">indiceAeroporto("GRU") → 0   (posição no vetor)
+indiceAeroporto("CNF") → 1   (posição no vetor)
+orig=0, dest=1 → voo vai na célula (linha 0, coluna 1)</div>
+        <div class="step-arrow">→ valida: orig != dest, numeroVoo > 0</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">buscarElemento(m, 0, 1)</div>
+        <div class="step-desc">Checa se já existe um voo na rota GRU→CNF (célula linha 0, coluna 1). Se existir, não pode inserir outro na mesma célula — a matriz guarda só um dado por célula.</div>
+        <div class="step-code">buscarCabecalho(linhas, 0)   → acha cabeçalho da linha 0
+percorre nós até coluna == 1 → NULL (célula vazia, pode inserir)</div>
+        <div class="step-arrow">→ retorna NULL (livre), vai para inserirElemento()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">buscarOuCriarCabecalho(&linhas, 0)</div>
+        <div class="step-desc">Garante que existe um cabeçalho para a linha 0. Se não existir, cria e insere na lista de cabeçalhos em ordem crescente.</div>
+        <div class="step-code">linhas: [cab0] ← criado agora
+              primeiro → NULL (ainda sem nós)</div>
+        <div class="step-arrow">→ faz o mesmo para a coluna 1</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">5</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">inserirElemento() — aloca e encadeia o nó</div>
+        <div class="step-desc">Aloca o nó e copia o dado (struct Voo com numero=101) usando memcpy. Encadeia na lista da linha (ordenado por coluna) E na lista da coluna (ordenado por linha).</div>
+        <div class="step-code">No *novo = malloc(sizeof(No))
+novo->dado = malloc(sizeof(Voo))    ← 4 bytes
+memcpy(novo->dado, &voo, sizeof(Voo))  ← copia {numero=101}
+
+Lista da linha 0:  [cab0] → [No(0,1,voo101)]
+Lista da coluna 1: [cab1] → [No(0,1,voo101)]
+                             ↑ mesmo nó nas duas listas!</div>
+        <div class="step-arrow">→ retorna 1 (sucesso) → [OK] Voo 101 cadastrado</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab(1)">← Anterior</button>
+    <button class="nav-btn primary" onclick="showTab(3)">Próximo: Remover Voo →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 3 — REMOVER VOO                          -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-section" id="tab3">
+  <div class="section-title">Operação 3 — Remover Voo</div>
+  <div class="section-sub">Usuário informa só o número do voo. O sistema busca em toda a matriz e remove a aresta.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#056530"></div> matriz_esparsa.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-main">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">op_removerVoo(g)</div>
+        <div class="step-desc">Lê apenas o número do voo. O enunciado pede remoção só pelo número — sem precisar saber origem e destino.</div>
+        <div class="step-code">lerInteiro("Numero do voo: ") → 101</div>
+        <div class="step-arrow">→ chama removerVoo(g, 101)</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">removerVoo() — varre toda a matriz</div>
+        <div class="step-desc">Como não sabe em qual rota está o voo 101, percorre todas as linhas (todos os aeroportos) chamando primeiroDaLinha() e comparando o número de cada voo.</div>
+        <div class="step-code">for i = 0 até quantidade-1:
+    no = primeiroDaLinha(matriz, i)    ← entra na linha i
+    while no != NULL:
+        voo = (Voo*) no->dado
+        if voo->numero == 101:
+            dest = no->coluna          ← salva ANTES de remover!
+            removerElemento(i, dest)   ← próximo passo
+            return 1</div>
+        <div class="step-arrow">→ achou voo 101 na linha 0, coluna 1 → chama removerElemento()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">removerElemento(m, 0, 1)</div>
+        <div class="step-desc">Desencadeia o nó da lista da linha E da lista da coluna. Depois libera o dado interno e o próprio nó. A ordem importa: primeiro ajustar ponteiros, depois liberar memória.</div>
+        <div class="step-code">— Desencadeia da linha 0 —
+cab0->primeiro = no->proxLinha   (era o único nó, fica NULL)
+
+— Desencadeia da coluna 1 —
+cab1->primeiro = no->proxColuna  (era o único nó, fica NULL)
+
+free(no->dado)   ← libera os 4 bytes do Voo
+free(no)         ← libera o nó</div>
+        <div class="step-arrow">→ chama removerCabecalhoSeVazio() para linha 0 e coluna 1</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">removerCabecalhoSeVazio()</div>
+        <div class="step-desc">Verifica se a linha 0 e a coluna 1 ficaram sem nenhum nó. Se ficaram vazias, remove os próprios cabeçalhos para não deixar cabeçalhos fantasmas consumindo memória.</div>
+        <div class="step-code">cab0->primeiro == NULL → remove cab0 da lista de linhas
+cab1->primeiro == NULL → remove cab1 da lista de colunas
+[OK] Voo 101 (GRU -> CNF) removido.</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab(2)">← Anterior</button>
+    <button class="nav-btn primary" onclick="showTab(4)">Próximo: Listar Voos →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 4 — LISTAR VOOS                          -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-section" id="tab4">
+  <div class="section-title">Operação 4 — Listar Voos de um Aeroporto</div>
+  <div class="section-sub">Usuário informa o código de origem. O sistema percorre a linha do aeroporto na matriz e lista todos os voos.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#056530"></div> matriz_esparsa.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-main">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">op_listarVoos(g)</div>
+        <div class="step-desc">Lê o código do aeroporto de origem e repassa.</div>
+        <div class="step-code">lerString("Codigo do aeroporto: ", codigo) → "CNF"
+maiusculas(codigo) → "CNF"</div>
+        <div class="step-arrow">→ chama listarVoos(g, "CNF")</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">indiceAeroporto(g, "CNF")</div>
+        <div class="step-desc">Converte o código em índice numérico. Esse índice é o número da linha na matriz que representa os voos saindo de CNF.</div>
+        <div class="step-code">indiceAeroporto("CNF") → 1   (linha 1 da matriz)</div>
+        <div class="step-arrow">→ chama primeiroDaLinha(matriz, 1)</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">primeiroDaLinha(m, 1)</div>
+        <div class="step-desc">Busca o cabeçalho da linha 1 e retorna o ponteiro para o primeiro nó. Se a linha não existir na matriz, retorna NULL (nenhum voo saindo daqui).</div>
+        <div class="step-code">buscarCabecalho(linhas, 1) → cab1
+return cab1->primeiro      → No(1,2,voo555)  ← primeiro voo de CNF</div>
+        <div class="step-arrow">→ retorna o primeiro nó para listarVoos()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">listarVoos() — percorre proxLinha</div>
+        <div class="step-desc">Com o primeiro nó em mãos, percorre a lista usando no->proxLinha. Cada nó é um voo saindo de CNF. A lista já está ordenada por coluna (índice do destino) porque inserirElemento mantém a ordem.</div>
+        <div class="step-code">no = No(1,2,voo555)  → imprime: Voo 555 | GIG | Rio de Janeiro
+no = no->proxLinha
+no = No(1,3,voo101)  → imprime: Voo 101 | GRU | Sao Paulo
+no = no->proxLinha
+no = No(1,4,voo214)  → imprime: Voo 214 | SSA | Salvador
+no = no->proxLinha
+no = NULL            → fim da lista, para o loop</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab(3)">← Anterior</button>
+    <button class="nav-btn primary" onclick="showTab(5)">Próximo: Listar Trajetos →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 5 — LISTAR TRAJETOS (DFS)               -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-section" id="tab5">
+  <div class="section-title">Operação 5 — Listar Trajetos entre dois Aeroportos (DFS)</div>
+  <div class="section-sub">A operação mais complexa. Usa busca em profundidade para encontrar TODOS os caminhos possíveis, incluindo com escalas.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#056530"></div> matriz_esparsa.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-main">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">op_listarTrajetos(g)</div>
+        <div class="step-desc">Lê código de origem e destino, repassa.</div>
+        <div class="step-code">orig = "GRU" (índice 0), dest = "BSB" (índice 3)</div>
+        <div class="step-arrow">→ chama listarTrajetos(g, "GRU", "BSB")</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">listarTrajetos() — prepara o estado da DFS</div>
+        <div class="step-desc">Valida os aeroportos. Aloca dinamicamente dois arrays com tamanho igual ao número de aeroportos: visitados[] (para não entrar em ciclos) e caminho[] (para guardar o trajeto atual). Marca GRU como visitada e coloca no caminho.</div>
+        <div class="step-code">visitados = calloc(5, sizeof(int)) → [0,0,0,0,0]
+caminho   = malloc(5 * sizeof(int)) → [?,?,?,?,?]
+
+visitados[0] = 1       ← GRU marcada como visitada
+caminho[0]   = 0       ← GRU entra no caminho
+profundidade = 1</div>
+        <div class="step-arrow">→ chama dfs(g, &st, atual=0, destino=3)</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">dfs() — caso base e recursão</div>
+        <div class="step-desc">Função recursiva. Dois casos: (1) chegou ao destino → imprime o caminho acumulado. (2) ainda não chegou → para cada vizinho não visitado, entra nele e chama dfs() de novo. Ao voltar, desfaz a escolha (backtracking) para tentar outro caminho.</div>
+        <div class="step-code">dfs(atual=GRU=0, destino=BSB=3)
+  vizinhos de GRU: CNF(1), GIG(2)   ← lidos da linha 0 da matriz
+
+  → tenta CNF (não visitado):
+    visitados[1]=1, caminho=[GRU,CNF], prof=2
+    dfs(atual=CNF=1, destino=BSB=3)
+      vizinhos de CNF: GIG(2), GRU(0), SSA(4)
+      → tenta GIG (não visitado):
+          visitados[2]=1, caminho=[GRU,CNF,GIG], prof=3
+          dfs(atual=GIG=2, destino=BSB=3)
+            vizinhos de GIG: CNF(1), GRU(0)
+            → CNF já visitado, GRU já visitado → sem saída
+          profundidade--, visitados[2]=0   ← BACKTRACK
+      → tenta GRU → já visitado, pula
+      → tenta SSA (não visitado):
+          caminho=[GRU,CNF,SSA], prof=3
+          dfs(atual=SSA=4, destino=BSB=3)
+            vizinhos de SSA: CNF(1) → já visitado → sem saída
+          BACKTRACK
+    BACKTRACK de CNF
+
+  → tenta GIG (não visitado):
+    visitados[2]=1, caminho=[GRU,GIG], prof=2
+    dfs(atual=GIG=2, destino=BSB=3)
+      vizinhos: CNF(1), GRU(0)
+      → CNF → dfs → ... → sem saída → BACKTRACK
+      → GRU → já visitado
+    BACKTRACK
+
+→ Resultado: nenhum trajeto GRU→BSB encontrado diretamente</div>
+        <div class="step-arrow">→ retorna para listarTrajetos()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c / matriz_esparsa.c</div>
+        <div class="step-fn fn-aero">primeiroDaLinha() — dentro da DFS</div>
+        <div class="step-desc">A cada chamada de dfs(), ela chama primeiroDaLinha() para entrar na linha do aeroporto atual e percorre os vizinhos com no->proxLinha. É aqui que a matriz esparsa é consultada a cada passo da busca.</div>
+        <div class="step-arrow">→ cada vizinho leva a uma nova chamada recursiva de dfs()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-end">5</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">listarTrajetos() — libera memória</div>
+        <div class="step-desc">Depois que a DFS termina, libera visitados[] e caminho[] que foram alocados dinamicamente. Sem isso, vazamento de memória a cada chamada.</div>
+        <div class="step-code">free(st.visitados)
+free(st.caminho)
+→ retorna para main()</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab(4)">← Anterior</button>
+    <button class="nav-btn primary" onclick="showTab(6)">Próximo: Destruição →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- TAB 6 — DESTRUIÇÃO                           -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-section" id="tab6">
+  <div class="section-title">Destruição — Liberando toda a memória</div>
+  <div class="section-sub">Quando o usuário digita 0 para sair, o programa libera tudo que foi alocado antes de encerrar.</div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> main.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> aeroporto.c</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#056530"></div> matriz_esparsa.c</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-main">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-main">main.c</div>
+        <div class="step-fn fn-main">main() — usuário digita 0</div>
+        <div class="step-desc">O loop do-while detecta opcao==0 e sai. main() então chama destruirGrafo() para liberar toda a memória antes de retornar EXIT_SUCCESS.</div>
+        <div class="step-arrow">→ chama destruirGrafo(g)</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-aero">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-aero">aeroporto.c</div>
+        <div class="step-fn fn-aero">destruirGrafo(g)</div>
+        <div class="step-desc">Libera em ordem: primeiro a matriz (que libera todos os nós internamente), depois o vetor de aeroportos, depois a struct Grafo. A ordem é importante porque a matriz referencia índices do vetor.</div>
+        <div class="step-code">destruirMatriz(g->matriz)    ← 1º: libera todos os voos
+free(g->aeroportos)          ← 2º: libera o vetor de aeroportos
+free(g)                      ← 3º: libera a struct Grafo</div>
+        <div class="step-arrow">→ chama destruirMatriz()</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">destruirMatriz() — 1ª passagem: pelas linhas</div>
+        <div class="step-desc">Percorre cada cabeçalho de linha. Para cada linha, percorre todos os nós via proxLinha. Para cada nó: libera o dado interno (free(no->dado)) e depois o nó (free(no)). Por fim libera o cabeçalho da linha.</div>
+        <div class="step-code">cabLin = linhas (cabeçalho da linha 0)
+  no = cab0->primeiro
+  while no != NULL:
+      prox = no->proxLinha    ← salva próximo ANTES de liberar
+      free(no->dado)          ← libera o Voo
+      free(no)                ← libera o nó
+      no = prox
+  free(cab0)                  ← libera o cabeçalho
+cabLin = próximo cabeçalho de linha...</div>
+        <div class="step-arrow">→ todos os nós liberados → agora libera cabeçalhos de coluna</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-dot color-mat">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-file file-mat">matriz_esparsa.c</div>
+        <div class="step-fn fn-mat">destruirMatriz() — 2ª passagem: pelas colunas</div>
+        <div class="step-desc">Libera apenas os cabeçalhos de coluna. Os nós já foram liberados na 1ª passagem — não tenta liberá-los de novo (double free causaria crash).</div>
+        <div class="step-code">cabCol = colunas
+while cabCol != NULL:
+    prox = cabCol->prox
+    free(cabCol)   ← só o cabeçalho, nós já foram liberados
+    cabCol = prox
+free(m)            ← libera a struct MatrizEsparsa</div>
+        <div class="step-arrow">→ retorna para destruirGrafo() → retorna para main() → programa encerra</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab(5)">← Anterior</button>
+    <button class="nav-btn" onclick="showTab(0)">↺ Recomeçar do início</button>
+  </div>
+</div>
+
+</div><!-- .content -->
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const sections = document.querySelectorAll('.flow-section');
+
+  function showTab(idx) {
+    tabs.forEach((t, i) => t.classList.toggle('active', i === idx));
+    sections.forEach((s, i) => s.classList.toggle('active', i === idx));
+    animateSteps();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function animateSteps() {
+    const steps = document.querySelectorAll('.flow-section.active .step');
+    steps.forEach(s => s.classList.remove('visible'));
+    steps.forEach((s, i) => {
+      setTimeout(() => s.classList.add('visible'), i * 120);
+    });
+  }
+
+  animateSteps();
+</script>
+</body>
+</html>

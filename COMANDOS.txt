@@ -1,0 +1,2 @@
+cd ~/Downloads/Matriz-Esparsa-SI-main
+make clean && make && ./aeroportos
