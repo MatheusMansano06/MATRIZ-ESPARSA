@@ -214,11 +214,27 @@ int main(void) {
      * adicionar mais aeroportos e cadastrar os voos pelo menu.
      */
     printf("  [SISTEMA] Carregando aeroportos iniciais...\n");
-    cadastrarAeroporto(g, "BSB", "Brasilia");
-    cadastrarAeroporto(g, "CNF", "Belo Horizonte");
-    cadastrarAeroporto(g, "GIG", "Rio de Janeiro");
-    cadastrarAeroporto(g, "GRU", "Sao Paulo");
-    cadastrarAeroporto(g, "SSA", "Salvador");
+    cadastrarAeroporto(g, "BSB", "Brasilia");        /* indice 0 */
+    cadastrarAeroporto(g, "CNF", "Belo Horizonte");  /* indice 1 */
+    cadastrarAeroporto(g, "GIG", "Rio de Janeiro");  /* indice 2 */
+    cadastrarAeroporto(g, "GRU", "Guarulhos");       /* indice 3 */
+    cadastrarAeroporto(g, "SSA", "Salvador");        /* indice 4 */
+
+    /*
+     * Pré-carrega os voos da Figura 1 do enunciado (matriz de adjacência).
+     * Cada voo segue a posição linha->coluna da matriz da figura.
+     */
+    printf("  [SISTEMA] Carregando voos iniciais (Figura 1)...\n");
+    cadastrarVoo(g, 107, "BSB", "SSA");  /* linha 0, coluna 4 */
+    cadastrarVoo(g, 555, "CNF", "GIG");  /* linha 1, coluna 2 */
+    cadastrarVoo(g, 101, "CNF", "GRU");  /* linha 1, coluna 3 */
+    cadastrarVoo(g, 214, "CNF", "SSA");  /* linha 1, coluna 4 */
+    cadastrarVoo(g, 554, "GIG", "CNF");  /* linha 2, coluna 1 */
+    cadastrarVoo(g,  90, "GIG", "GRU");  /* linha 2, coluna 3 */
+    cadastrarVoo(g,  50, "GRU", "BSB");  /* linha 3, coluna 0 */
+    cadastrarVoo(g, 102, "GRU", "CNF");  /* linha 3, coluna 1 */
+    cadastrarVoo(g,  89, "GRU", "GIG");  /* linha 3, coluna 2 */
+    cadastrarVoo(g, 215, "SSA", "CNF");  /* linha 4, coluna 1 */
     printf("  [SISTEMA] Pronto!\n\n");
 
     int  opcao;
