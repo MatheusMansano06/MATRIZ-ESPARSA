@@ -208,6 +208,19 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
+    /*
+     * Pré-carrega os 5 aeroportos iniciais conforme o enunciado.
+     * O sistema já começa com eles cadastrados — o usuário pode
+     * adicionar mais aeroportos e cadastrar os voos pelo menu.
+     */
+    printf("  [SISTEMA] Carregando aeroportos iniciais...\n");
+    cadastrarAeroporto(g, "BSB", "Brasilia");
+    cadastrarAeroporto(g, "CNF", "Belo Horizonte");
+    cadastrarAeroporto(g, "GIG", "Rio de Janeiro");
+    cadastrarAeroporto(g, "GRU", "Sao Paulo");
+    cadastrarAeroporto(g, "SSA", "Salvador");
+    printf("  [SISTEMA] Pronto!\n\n");
+
     int  opcao;
     char buf[8];
 
