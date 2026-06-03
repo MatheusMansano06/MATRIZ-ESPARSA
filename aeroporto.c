@@ -202,14 +202,27 @@ int cadastrarVoo(Grafo *g, int numeroVoo,
         return 0;
     }
 
-    /* Verifica se já existe qualquer voo nessa rota */
+    /* Verifica se o número de voo já existe em qualquer rota do sistema */
+    for (int i = 0; i < g->quantidade; i++) {
+        No *no = primeiroDaLinha(g->matriz, i);
+        while (no) {
+            Voo *v = (Voo *)no->dado;
+            if (v->numero == numeroVoo) {
+                printf("[FALHA] Voo %d ja existe na rota %s -> %s.\n",
+                       numeroVoo,
+                       g->aeroportos[i].codigo,
+                       g->aeroportos[no->coluna].codigo);
+                return 0;
+            }
+            no = no->proxLinha;
+        }
+    }
+
+    /* Verifica se já existe qualquer voo nessa rota específica */
     Voo *existente = (Voo *)buscarElemento(g->matriz, orig, dest);
     if (existente) {
-        if (existente->numero == numeroVoo)
-            printf("[FALHA] Voo %d ja existe nessa rota.\n", numeroVoo);
-        else
-            printf("[FALHA] Ja existe o voo %d nessa rota. "
-                   "Remova-o antes de inserir outro.\n", existente->numero);
+        printf("[FALHA] Ja existe o voo %d nessa rota. "
+               "Remova-o antes de inserir outro.\n", existente->numero);
         return 0;
     }
 
